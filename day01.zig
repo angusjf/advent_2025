@@ -1,36 +1,32 @@
 const std = @import("std");
 
-fn solve(gpa: std.mem.Allocator, input: []const u8) !u32 {
-    _ = gpa; // autofix
+fn solve(input: []const u8) !struct { u32, u32 } {
     var angle: i32 = 50;
 
-    var zeroes: u32 = 0;
+    var zeroes1: u32 = 0;
+    var zeroes2: u32 = 0;
 
     var lines = std.mem.tokenizeScalar(u8, input, '\n');
 
     while (lines.next()) |line| {
-        std.debug.print("{s}\n", .{line});
         const n = try std.fmt.parseInt(u16, line[1..], 10);
-        switch (line[0]) {
-            'L' => {
-                zeroes += @abs(@divFloor((angle - n), 100));
-                angle = @mod(100 + angle - n, 100);
-            },
 
-            'R' => {
-                zeroes += @abs(@divFloor((angle + n), 100));
-                angle = @mod(angle + n, 100);
-            },
-
+        const dir: i32 = switch (line[0]) {
+            'L' => 1,
+            'R' => -1,
             else => unreachable,
-        }
+        };
 
-        // if (angle == 0) {
-        //     zeroes += 1;
-        // }
+        zeroes2 += @abs(@divFloor(angle + n * dir, 100));
+
+        angle = @mod(angle + n * dir, 100);
+
+        if (angle == 0) {
+            zeroes1 += 1;
+        }
     }
 
-    return zeroes;
+    return .{ zeroes1, zeroes2 };
 }
 
 test solve {
@@ -46,14 +42,11 @@ test solve {
         \\R14
         \\L82
     ;
-    try std.testing.expectEqual(3, try solve(std.testing.allocator, input));
+    try std.testing.expectEqual(.{ 3, 6 }, try solve(input));
 }
 
 pub fn main() !void {
-    var debug_allocator: std.heap.DebugAllocator(.{}) = .init;
-    const gpa = debug_allocator.allocator();
+    const pt1, const pt2 = try solve(@embedFile("input01.txt"));
 
-    const result = try solve(gpa, @embedFile("input01.txt"));
-
-    std.debug.print("{d}\n", .{result});
+    std.debug.print("{d}\n{d}\n", .{ pt1, pt2 });
 }
