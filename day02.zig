@@ -8,9 +8,8 @@ fn isValid(id: u64) bool {
     const num_digits = std.math.log10_int(id) + 1;
 
     var len: u32 = 1;
-    loop: while (len < num_digits) {
+    loop: while (len < num_digits) : (len += 1) {
         if (num_digits % len != 0) {
-            len += 1;
             continue;
         }
 
@@ -20,7 +19,6 @@ fn isValid(id: u64) bool {
             const section = (id / pow10(len * i)) % pow10(len);
 
             if (section != bottom) {
-                len += 1;
                 continue :loop;
             }
         }
