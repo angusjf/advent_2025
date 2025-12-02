@@ -7,23 +7,18 @@ fn pow10(n: u64) u64 {
 fn isValid(id: u64) bool {
     const num_digits = std.math.log10_int(id) + 1;
 
-    var len: u32 = 1;
-    loop: while (len < num_digits) : (len += 1) {
-        if (num_digits % len != 0) {
-            continue;
-        }
+    var section_size: u32 = 1;
 
-        const bottom = id % pow10(len);
+    while (section_size < num_digits) : (section_size += 1) {
+        if (num_digits % section_size != 0) continue;
 
-        for (1..num_digits / len) |i| {
-            const section = (id / pow10(len * i)) % pow10(len);
+        const final_section = id % pow10(section_size);
 
-            if (section != bottom) {
-                continue :loop;
-            }
-        }
+        for (1..num_digits / section_size) |i| {
+            const section = (id / pow10(section_size * i)) % pow10(section_size);
 
-        return false;
+            if (section != final_section) break;
+        } else return false;
     }
 
     return true;
