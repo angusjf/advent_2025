@@ -10,7 +10,7 @@ fn dist_between(a: Vec3, b: Vec3) f32 {
     );
 }
 
-fn solve(gpa: std.mem.Allocator, input: []const u8, n: usize) !u32 {
+fn solve(gpa: std.mem.Allocator, input: []const u8) !u32 {
     var numbers = std.mem.tokenizeAny(u8, input, "\n,");
     var points: std.ArrayList(Vec3) = .empty;
     defer points.deinit(gpa);
@@ -31,7 +31,7 @@ fn solve(gpa: std.mem.Allocator, input: []const u8, n: usize) !u32 {
     var pairs: std.AutoHashMapUnmanaged(struct { usize, usize }, void) = .empty;
     defer pairs.deinit(gpa);
 
-    for (0..n) |z| {
+    for (0..10000000) |z| {
         std.debug.print("#{d}\n", .{z});
         var closest_dist: f32 = std.math.inf(f32);
         var closest_i: usize = 0;
@@ -57,58 +57,70 @@ fn solve(gpa: std.mem.Allocator, input: []const u8, n: usize) !u32 {
 
         try pairs.putNoClobber(gpa, .{ closest_i, closest_j }, {});
         try pairs.putNoClobber(gpa, .{ closest_j, closest_i }, {});
-    }
+        std.debug.print("{any} {any}\n", .{ points.items[closest_i], points.items[closest_j] });
 
-    std.debug.print("pairs: {d}\n", .{pairs.size});
-
-    var connections: std.AutoHashMapUnmanaged(usize, std.AutoHashMapUnmanaged(usize, void)) = .empty;
-    defer connections.deinit(gpa);
-    defer {
-        var it = connections.valueIterator();
-
-        while (it.next()) |v| {
-            v.*.deinit(gpa);
-        }
-    }
-
-    var pairs_it = pairs.keyIterator();
-
-    while (pairs_it.next()) |pair| {
         {
-            const gop = try connections.getOrPut(gpa, pair.@"0");
+            std.debug.print("pairs: {d}\n", .{pairs.size});
 
-            if (!gop.found_existing) gop.value_ptr.* = .empty;
-            try gop.value_ptr.*.put(gpa, pair.@"1", {});
-        }
-        {
-            const gop = try connections.getOrPut(gpa, pair.@"1");
+            var connections: std.AutoHashMapUnmanaged(usize, std.AutoHashMapUnmanaged(usize, void)) = .empty;
+            defer connections.deinit(gpa);
+            defer {
+                var it = connections.valueIterator();
 
-            if (!gop.found_existing) gop.value_ptr.* = .empty;
-            try gop.value_ptr.*.put(gpa, pair.@"0", {});
+                while (it.next()) |v| {
+                    v.*.deinit(gpa);
+                }
+            }
+
+            var pairs_it = pairs.keyIterator();
+
+            while (pairs_it.next()) |pair| {
+                {
+                    const gop = try connections.getOrPut(gpa, pair.@"0");
+
+                    if (!gop.found_existing) gop.value_ptr.* = .empty;
+                    try gop.value_ptr.*.put(gpa, pair.@"1", {});
+                }
+                {
+                    const gop = try connections.getOrPut(gpa, pair.@"1");
+
+                    if (!gop.found_existing) gop.value_ptr.* = .empty;
+                    try gop.value_ptr.*.put(gpa, pair.@"0", {});
+                }
+            }
+
+            if (connections.size != points.items.len) {
+                std.debug.print("not enough connections: {d}\n", .{connections.size});
+                std.debug.print("should be at least {d}\n", .{points.items.len});
+                continue;
+            }
+
+            var nodes = connections.keyIterator();
+
+            std.debug.print("connections: {d}\n", .{connections.size});
+
+            var visited: std.AutoHashMapUnmanaged(usize, void) = .empty;
+            defer visited.deinit(gpa);
+
+            var component_sizes: std.ArrayListUnmanaged(u32) = .empty;
+            defer component_sizes.deinit(gpa);
+
+            while (nodes.next()) |node| {
+                const old_size = visited.size;
+                if (visited.contains(node.*)) continue;
+                try dfs(gpa, &visited, &connections, node.*);
+                std.debug.print("dfs: {d}\n", .{visited.size - old_size});
+                try component_sizes.append(gpa, visited.size - old_size);
+            }
+
+            std.debug.print("components: {d}\n", .{component_sizes.items.len});
+
+            std.mem.sortUnstable(u32, component_sizes.items, {}, std.sort.desc(u32));
+
+            return 99;
         }
     }
-
-    std.debug.print("connections: {d}\n", .{connections.size});
-
-    var nodes = connections.keyIterator();
-
-    var visited: std.AutoHashMapUnmanaged(usize, void) = .empty;
-    defer visited.deinit(gpa);
-
-    var component_sizes: std.ArrayListUnmanaged(u32) = .empty;
-    defer component_sizes.deinit(gpa);
-
-    while (nodes.next()) |node| {
-        const old_size = visited.size;
-        if (visited.contains(node.*)) continue;
-        try dfs(gpa, &visited, &connections, node.*);
-        std.debug.print("dfs: {d}\n", .{visited.size - old_size});
-        try component_sizes.append(gpa, visited.size - old_size);
-    }
-
-    std.mem.sortUnstable(u32, component_sizes.items, {}, std.sort.desc(u32));
-
-    return component_sizes.items[0] * component_sizes.items[1] * component_sizes.items[2];
+    unreachable;
 }
 
 fn dfs(
@@ -153,9 +165,9 @@ test {
         \\425,690,689
     ;
 
-    try std.testing.expectEqual(40, try solve(std.testing.allocator, input, 10));
+    try std.testing.expectEqual(40, try solve(std.testing.allocator, input));
 }
 
 pub fn main() !void {
-    std.debug.print("{d}\n", .{try solve(std.heap.page_allocator, @embedFile("input08.txt"), 1000)});
+    std.debug.print("{d}\n", .{try solve(std.heap.page_allocator, @embedFile("input08.txt"))});
 }
