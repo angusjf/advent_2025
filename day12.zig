@@ -54,13 +54,13 @@ fn can_fit(gpa: std.mem.Allocator, shapes: [6][3][3]bool, w: u32, h: u32, n_pres
         total_cells += cells * n;
     }
 
-    std.debug.print("{d} {d} {d}\n", .{
-        total_cells,
-        w * h,
-        ((w * h * 3) / 4),
-    });
+    const max_cells = 9 * (n_presents[0] + n_presents[1] + n_presents[2] + n_presents[3] + n_presents[4] + n_presents[5]);
 
-    return total_cells < (w * h * 3) / 4;
+    if (w * h >= max_cells) return true;
+
+    if (w * h < total_cells) return false;
+
+    @panic("somewhere in the middle");
 }
 
 test {
